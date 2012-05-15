@@ -1,8 +1,6 @@
 source "http://rubygems.org"
 
 gem 'mongo'
-gem 'redis'
+gem 'bson_ext'
 gem 'sinatra'
 gem 'json'
-gem 'carrot'
-gem 'pg'
