@@ -2,40 +2,69 @@ require 'sinatra'
 require 'json'
 require 'mongo'
 require 'uri'
+require 'aws/s3'
 
 get '/env' do
   ENV['VMC_SERVICES']
 end
 
 get '/' do
-  'hello from sinatra'
-end
-
-get '/crash' do
-  Process.kill("KILL", Process.pid)
+  'hello from sinatra - get v0.8<br>vblob'
 end
 
 get '/list' do
-  coll = get_mongo_db['fs.files']
-  coll.find.to_a.to_json
+  load_vblob
+  list_objs
 end
 
 get '/files/:key' do
-  db = get_mongo_db
-  grid = Mongo::Grid.new(db)
-  coll = get_mongo_db['fs.files']
-  id = coll.find('filename' => params[:key]).to_a.first['_id']
-  file = grid.get(id)
-  file.read
+  load_vblob
+  AWS::S3::S3Object.value(params[:key], VBLOB_BUCKET_NAME)
 end
 
 not_found do
   'This is nowhere to be found.'
 end
 
-def get_mongo_db
-  conn = Mongo::Connection.new('127.0.0.1', 4567)
-  db = conn['testdb']
+VBLOB_BUCKET_NAME = 'assets-storage'
+
+def get_bucket
+  begin
+    bucket = AWS::S3::Bucket.find(VBLOB_BUCKET_NAME)
+  rescue AWS::S3::NoSuchBucket
+    AWS::S3::Bucket.create(VBLOB_BUCKET_NAME)
+    bucket = AWS::S3::Bucket.find(VBLOB_BUCKET_NAME)
+  end
+  bucket
 end
 
+def list_objs
+  bucket = get_bucket
 
+  data = []
+  bucket.objects.each do |obj|
+    item = {}
+    item['filename'] = obj.key
+    about            = obj.about
+    item['md5']      = about['etag']
+    item['length']   = about['content-length']
+    data << item
+  end
+  data.to_json
+end
+
+def load_vblob
+  vblob_service = load_service('vblob')
+  AWS::S3::Base.establish_connection!(
+      :access_key_id      => vblob_service['username'],
+      :secret_access_key  => vblob_service['password'],
+      :port               => vblob_service['port'],
+      :server             => vblob_service['host']
+  ) unless vblob_service == nil
+end
+
+def load_service(service_name)
+  services = JSON.parse(ENV['VMC_SERVICES'])
+  service = services.find {|service| service["vendor"].downcase == service_name}
+  service = service["options"] if service
+end
