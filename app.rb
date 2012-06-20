@@ -3,6 +3,7 @@ require 'json'
 require 'mongo'
 require 'uri'
 require 'aws/s3'
+require 'sinatra/streaming'
 
 get '/env' do
   ENV['VMC_SERVICES']
@@ -19,7 +20,10 @@ end
 
 get '/files/:key' do
   load_vblob
-  AWS::S3::S3Object.value(params[:key], VBLOB_BUCKET_NAME)
+  stream do |out|
+    out.puts AWS::S3::S3Object.value(params[:key], VBLOB_BUCKET_NAME)
+    out.flush
+  end
 end
 
 not_found do
