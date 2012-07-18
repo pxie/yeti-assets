@@ -10,7 +10,7 @@ get '/env' do
 end
 
 get '/' do
-  'hello from sinatra - get v0.8<br>vblob'
+  'hello from sinatra - get v0.8<br>fix memory leak'
 end
 
 get '/list' do
