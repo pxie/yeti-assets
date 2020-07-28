@@ -11,7 +11,7 @@ GEM
       bson (~> 1.6.2)
     builder (3.0.0)
     eventmachine (0.12.10)
-    json (1.7.3)
+    json (2.3.0)
     mime-types (1.18)
     mongo (1.6.2)
       bson (~> 1.6.2)
